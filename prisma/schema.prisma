@@ -1,0 +1,59 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Ticket {
+  id           String   @id
+  brand        String
+  clientName   String
+  subject      String
+  product      String?
+  status       String?
+  lastMessage  String @db.MediumText
+  date         String?
+  clientMsgs   Json?
+  agentMsgs    Json?
+  ownerId      String?
+  owner        User?    @relation(fields: [ownerId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  firstName    String?
+  lastName     String?
+  phone        String?
+  bio          String?
+  location     String?
+  facebook     String?
+  twitter      String?
+  linkedin     String?
+  instagram    String?
+  country      String?
+  cityState    String?
+  postalCode   String?
+  taxId        String?
+  avatarUrl    String?
+  passwordHash String
+  sessions     Session[]
+  tickets      Ticket[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
