@@ -50,14 +50,21 @@ export default async function TodayTicketLeaguePage() {
     select: { id: true, name: true, email: true, avatarUrl: true },
   })
 
+  type LeaderboardEntry = { owner: Owner; count: number; rank: number }
+
   const leaderboard = owners
-    .map((owner: Owner) => ({
-      owner,
-      count: counts.get(owner.id) ?? 0,
-      rank: 0,
+    .map(
+      (owner: Owner): LeaderboardEntry => ({
+        owner,
+        count: counts.get(owner.id) ?? 0,
+        rank: 0,
+      })
+    )
+    .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.count - a.count)
+    .map((entry: LeaderboardEntry, index: number) => ({
+      ...entry,
+      rank: index + 1,
     }))
-    .sort((a, b) => b.count - a.count)
-    .map((entry, index) => ({ ...entry, rank: index + 1 }))
 
   if (!leaderboard.some((entry) => entry.owner.id === user.id)) {
     leaderboard.push({
