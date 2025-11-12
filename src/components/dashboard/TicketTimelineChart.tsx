@@ -13,9 +13,10 @@ type TimelinePoint = {
 
 type Props = {
   data: TimelinePoint[];
+  timezoneLabel: string;
 };
 
-export default function TicketTimelineChart({ data }: Props) {
+export default function TicketTimelineChart({ data, timezoneLabel }: Props) {
   const chartConfig = useMemo(() => {
     const series = [
       {
@@ -81,7 +82,7 @@ export default function TicketTimelineChart({ data }: Props) {
       <div>
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Ticket Activity</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Daily ticket volume (last {data.length || 0} days)
+          Daily ticket volume (last {data.length || 0} days, {timezoneLabel})
         </p>
       </div>
 

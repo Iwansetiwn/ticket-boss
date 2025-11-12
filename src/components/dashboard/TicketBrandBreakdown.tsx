@@ -24,24 +24,42 @@ export default function TicketBrandBreakdown({ allTime, today }: Props) {
 
   const config = useMemo(() => {
     const series = data.map((item) => item.count);
+    const totalTickets = series.reduce((acc, curr) => acc + curr, 0);
     const options: ApexOptions = {
       chart: { type: "donut", fontFamily: "Outfit, sans-serif" },
       labels: data.map((item) => item.brand),
       colors: brandColors,
       legend: { show: true, position: "bottom", fontFamily: "Outfit, sans-serif" },
+      plotOptions: {
+        pie: {
+          startAngle: -90,
+          endAngle: 90,
+          offsetY: 20,
+          expandOnClick: true,
+          donut: {
+            size: "78%",
+            labels: { show: false },
+          },
+          dataLabels: {
+            offset: -6,
+          },
+        },
+      },
+      grid: {
+        padding: { top: -10, bottom: -10 },
+      },
       tooltip: {
         fillSeriesColor: false,
         y: {
           formatter: (val: number, opts) => {
-            const total = series.reduce((acc, curr) => acc + curr, 0);
-            const percent = total ? ((val / total) * 100).toFixed(1) : "0.0";
-            const label = options.labels?.[opts.seriesIndex] ?? "Brand";
+            const percent = totalTickets ? ((val / totalTickets) * 100).toFixed(1) : "0.0";
+            const label = data[opts.seriesIndex]?.brand ?? "Category";
             return `${label}: ${val} tickets (${percent}%)`;
           },
         },
       },
       dataLabels: { enabled: false },
-      stroke: { width: 0 },
+      stroke: { width: 6, colors: ["rgba(15,23,42,0.12)"] },
     };
 
     return { series, options };
@@ -65,7 +83,9 @@ export default function TicketBrandBreakdown({ allTime, today }: Props) {
               key={option.value}
               onClick={() => setRange(option.value)}
               className={`rounded-full px-3 py-1 font-medium transition ${
-                range === option.value ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500"
+                range === option.value
+                  ? "bg-gray-900 text-white dark:!bg-white dark:!text-gray-900"
+                  : "text-gray-500 dark:text-gray-400"
               }`}
             >
               {option.label}
@@ -75,7 +95,9 @@ export default function TicketBrandBreakdown({ allTime, today }: Props) {
       </div>
 
       {data.length ? (
-        <ReactApexChart options={config.options} series={config.series} type="donut" height={320} />
+        <div className="mt-2 flex justify-center">
+          <ReactApexChart options={config.options} series={config.series} type="donut" height={320} />
+        </div>
       ) : (
         <div className="py-14 text-center text-sm text-gray-500 dark:text-gray-400">
           No brand data available for this range.

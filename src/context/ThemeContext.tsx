@@ -12,33 +12,63 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const applyDocumentTheme = (nextTheme: Theme) => {
+  if (typeof document === "undefined") return;
+
+  document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  document.documentElement.dataset.theme = nextTheme;
+  document.documentElement.style.colorScheme = nextTheme;
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [theme, setTheme] = useState<Theme>("light");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasManualPreference, setHasManualPreference] = useState(false);
 
   useEffect(() => {
-    // This code will only run on the client side
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
-    const initialTheme = savedTheme || "light"; // Default to light theme
+    if (typeof window === "undefined") return;
 
-    setTheme(initialTheme);
+    const savedTheme = localStorage.getItem("theme") as Theme | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      setHasManualPreference(true);
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setTheme(prefersDark ? "dark" : "light");
+    }
     setIsInitialized(true);
   }, []);
 
   useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem("theme", theme);
-      if (theme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
+    if (!isInitialized || typeof window === "undefined") return;
+
+    localStorage.setItem("theme", theme);
+    applyDocumentTheme(theme);
   }, [theme, isInitialized]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (!hasManualPreference) {
+        setTheme(event.matches ? "dark" : "light");
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, [hasManualPreference]);
+
   const toggleTheme = () => {
+    setHasManualPreference(true);
     setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
   };
 

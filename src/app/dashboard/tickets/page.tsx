@@ -22,9 +22,11 @@ export default async function TicketsPage() {
     brand: t.brand ?? null,
     subject: t.subject ?? null,
     product: t.product ?? null,
+    issueCategory: t.issueCategory ?? null,
+    ticketUrl: t.ticketUrl ?? null,
     status: t.status ?? null,
     updatedAt: t.updatedAt.toISOString(),
   }))
 
-  return <TicketCards tickets={safe} />
+  return <TicketCards tickets={safe} liveRefreshInterval={15000} />
 }

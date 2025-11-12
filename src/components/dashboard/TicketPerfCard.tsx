@@ -9,15 +9,19 @@ const formatter = new Intl.NumberFormat("en-US");
 
 export default function TicketPerfCard({ today, yesterday }: Props) {
   const delta = today - yesterday;
-  const trend = delta === 0 ? "neutral" : delta > 0 ? "up" : "down";
-  const percent = yesterday ? Math.abs(((today - yesterday) / yesterday) * 100).toFixed(1) : "100";
+  let trendText: string;
 
-  const trendText =
-    trend === "neutral"
-      ? "No change from yesterday"
-      : trend === "up"
-      ? `${percent}% more than yesterday`
-      : `${percent}% fewer than yesterday`;
+  if (yesterday === 0) {
+    trendText =
+      today === 0
+        ? "No tickets recorded in the last two days."
+        : "No tickets yesterday—comparison will appear once there is history.";
+  } else if (delta === 0) {
+    trendText = "No change from yesterday";
+  } else {
+    const percent = Math.abs((delta / yesterday) * 100).toFixed(1);
+    trendText = delta > 0 ? `${percent}% more than yesterday` : `${percent}% fewer than yesterday`;
+  }
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">

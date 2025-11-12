@@ -3,8 +3,11 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 
 import DeleteTicketButton from "@/components/tickets/DeleteTicketButton"
+import TicketEditForm from "@/components/tickets/TicketEditForm"
 import prisma from "@/lib/prisma"
 import { getCurrentUser } from "@/lib/auth"
+import { getSupportInboxLink } from "@/lib/supportInbox"
+import { stripDailyTicketSuffix } from "@/lib/ticketIdentifier"
 
 function statusClasses(status?: string) {
   if (status === "Open") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400"
@@ -39,24 +42,34 @@ export default async function TicketPage({
   const showExtensionData =
     typeof extensionData !== "undefined" && extensionData !== null
 
+  const externalTicketUrl = ticket.ticketUrl ?? getSupportInboxLink(ticket.id)
+  const displayTicketId = stripDailyTicketSuffix(ticket.id)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Ticket #{ticket.id}
-          </h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Ticket #{displayTicketId}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {ticket.subject || "No subject"}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/dashboard/tickets"
             className="rounded-lg border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
           >
             Back to tickets
+          </Link>
+
+          <Link
+            href={externalTicketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          >
+            Open ticket ↗
           </Link>
 
           <span
@@ -67,54 +80,45 @@ export default async function TicketPage({
             {ticket.status ?? "Unknown"}
           </span>
 
-          <DeleteTicketButton id={ticket.id} />
+          <DeleteTicketButton id={ticket.id} subject={ticket.subject ?? undefined} />
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-gray-500 dark:text-gray-400">Client</dt>
-            <dd className="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">
-              {ticket.clientName || "Unknown Client"}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="text-xs text-gray-500 dark:text-gray-400">Brand</dt>
-            <dd className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-              {ticket.brand || "-"}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="text-xs text-gray-500 dark:text-gray-400">Product</dt>
-            <dd className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-              {ticket.product || "-"}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="text-xs text-gray-500 dark:text-gray-400">
-              Last Updated
-            </dt>
-            <dd className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-              {ticket.updatedAt.toLocaleString()}
-            </dd>
-          </div>
-        </dl>
-
-        {showExtensionData && (
-          <div className="mt-6">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-              Extension data (raw)
-            </h3>
-            <pre className="mt-2 max-h-64 overflow-auto rounded bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-200">
-              {JSON.stringify(extensionData, null, 2)}
-            </pre>
-          </div>
-        )}
+      <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 text-sm dark:border-white/[0.05] dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Ticket link</p>
+        <Link
+          href={externalTicketUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+        >
+          Open original ↗
+        </Link>
       </div>
+
+      <TicketEditForm
+        ticket={{
+          id: ticket.id,
+          clientName: ticket.clientName ?? "",
+          brand: ticket.brand ?? "",
+          subject: ticket.subject ?? "",
+          status: ticket.status ?? "Open",
+          issueCategory: ticket.issueCategory ?? "Uncategorized",
+          lastUpdated: ticket.updatedAt.toISOString(),
+          ticketUrl: ticket.ticketUrl ?? "",
+        }}
+      />
+
+      {showExtensionData && (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-white/[0.05] dark:bg-white/[0.03]">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+            Extension data (raw)
+          </h3>
+          <pre className="mt-2 max-h-64 overflow-auto rounded bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-200">
+            {JSON.stringify(extensionData, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   )
 }

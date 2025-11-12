@@ -1,173 +1,191 @@
-# Ticket Monitoring Next.js - Free Next.js Tailwind Admin Dashboard Template
+# Ticket Boss – Support Operations Dashboard
 
-Ticket Monitoring is a free and open-source admin dashboard template built on **Next.js and Tailwind CSS** providing developers with everything they need to create a feature-rich and data-driven: back-end, dashboard, or admin panel solution for any sort of web project.
+Ticket Boss is an internal-facing operations dashboard built with **Next.js 15**, **React 19**, **Prisma**, and **Tailwind CSS v4**. It centralizes live ticket feeds (ingested via API/extension), helps support agents manage their own workload, and surfaces team-wide insights such as brand performance and the “Today Ticket League”.
 
-![Ticket Monitoring - Next.js Dashboard Preview](./banner.png)
+![Ticket Boss Dashboard Preview](./banner.png)
 
-With Ticket Monitoring Next.js, you get access to all the necessary dashboard UI components, elements, and pages required to build a high-quality and complete dashboard or admin panel. Whether you're building a dashboard or admin panel for a complex web application or a simple website. 
+---
 
-Ticket Monitoring utilizes the powerful features of **Next.js 15** and common features of Next.js such as server-side rendering (SSR), static site generation (SSG), and seamless API route integration. Combined with the advancements of **React 19** and the robustness of **TypeScript**, Ticket Monitoring is the perfect solution to help get your project up and running quickly.
+## Key Features
 
-## Overview
+- **Secure email + password auth** with bcrypt hashing, session tokens, and HttpOnly cookies.
+- **Personal ticket workspace** with horizontal cards, calendar/date filtering, status filters, pagination, and owner-aware delete/claim actions.
+- **Dashboard analytics** including all-time vs today counts, adjustable daily goal tracker, brand breakdown (today vs all time) with tooltips, ticket activity timeline, and today-vs-yesterday performance.
+- **Today Ticket League** that ranks every signed-in user’s ticket count and highlights unassigned tickets still waiting to be claimed.
+- **Profile editor** so each agent can maintain contact information, biography, and upload their own avatar.
+- **Ticket ingestion API** designed for the Chrome extension or other systems. Upserts by ticket id, supports brand/client metadata, JSON payloads, and optional automatic assignment through `ownerEmail`.
+- **Dark/light mode**, responsive layout, and cleaned-up navigation (Dashboard, Tickets, KPI placeholder, Tools placeholder, Today Ticket League).
 
-Ticket Monitoring provides essential UI components and layouts for building feature-rich, data-driven admin dashboards and control panels. It's built on:
+---
 
-- Next.js 15.x
-- React 19
-- TypeScript
-- Tailwind CSS V4
+## Tech Stack
 
-### Quick Links
-- [✨ Visit Website](https://tailadmin.com)
-- [📄 Documentation](https://tailadmin.com/docs)
-- [⬇️ Download](https://tailadmin.com/download)
-- [🖌️ Figma Design File (Community Edition)](https://www.figma.com/community/file/1463141366275764364)
-- [⚡ Get PRO Version](https://tailadmin.com/pricing)
+| Area            | Choices                                                                 |
+|-----------------|-------------------------------------------------------------------------|
+| Framework       | Next.js 15.2.3 (App Router, Server & Client Components)                 |
+| Language        | TypeScript + React 19                                                   |
+| Styling         | Tailwind CSS v4, CSS modules, custom design tokens                      |
+| Data / ORM      | Prisma 6 + MySQL                                                        |
+| Auth            | Custom session tokens, bcrypt password hashing                          |
+| Charts & UI     | ApexCharts, FullCalendar, custom cards/forms                            |
 
-### Demos
-- [Free Version](https://nextjs-free-demo.tailadmin.com)
-- [Pro Version](https://nextjs-demo.tailadmin.com)
+---
 
-### Other Versions
-- [HTML Version](https://github.com/Ticket Monitoring/tailadmin-free-tailwind-dashboard-template)
-- [React Version](https://github.com/Ticket Monitoring/free-react-tailwind-admin-dashboard)
-- [Vue.js Version](https://github.com/Ticket Monitoring/vue-tailwind-admin-dashboard)
+## Repository Layout
 
-## Installation
-
-### Prerequisites
-To get started with Ticket Monitoring, ensure you have the following prerequisites installed and set up:
-
-- Node.js 18.x or later (recommended to use Node.js 20.x or later)
-
-### Cloning the Repository
-Clone the repository using the following command:
-
-```bash
-git clone https://github.com/Ticket Monitoring/free-nextjs-admin-dashboard.git
+```
+src/
+├─ app/                     # App Router routes (dashboard, auth, API endpoints)
+├─ components/              # Reusable UI (cards, charts, profile widgets, forms)
+├─ layout/                  # Sidebar + header chrome
+├─ lib/                     # Prisma client, auth helpers
+├─ icons/, context/, etc.   # Supporting utilities
+prisma/
+└─ schema.prisma            # Ticket, User, Session models
+public/images/logo/         # Ticket Boss logomark (chart icon)
 ```
 
-> Windows Users: place the repository near the root of your drive if you face issues while cloning.
+---
 
-1. Install dependencies:
-    ```bash
-    npm install
-    # or
-    yarn install
-    ```
-    > Use `--legacy-peer-deps` flag if you face peer-dependency error during installation.
+## Getting Started
 
-2. Start the development server:
-    ```bash
-    npm run dev
-    # or
-    yarn dev
-    ```
+### 1. Prerequisites
 
-## Components
+- Node.js **18+** (20+ recommended)
+- pnpm 9+ (or npm/yarn if you prefer)
+- MySQL 8 (or compatible Aurora/RDS). The Prisma schema expects a MySQL connection string.
 
-Ticket Monitoring is a pre-designed starting point for building a web-based dashboard using Next.js and Tailwind CSS. The template includes:
+### 2. Install Dependencies
 
-- Sophisticated and accessible sidebar
-- Data visualization components
-- Profile management and custom 404 page
-- Tables and Charts(Line and Bar)
-- Authentication forms and input elements
-- Alerts, Dropdowns, Modals, Buttons and more
-- Can't forget Dark Mode 🕶️
+```bash
+pnpm install
+# or
+npm install
+```
 
-All components are built with React and styled using Tailwind CSS for easy customization.
+### 3. Configure Environment Variables
 
-## Feature Comparison
+Create a `.env` file with at least:
 
-### Free Version
-- 1 Unique Dashboard
-- 30+ dashboard components
-- 50+ UI elements
-- Basic Figma design files
-- Community support
+| Variable          | Description                                                                                   | Example |
+|-------------------|-----------------------------------------------------------------------------------------------|---------|
+| `DATABASE_URL`    | Prisma connection string for MySQL. User must have permission to create a shadow database.    | `mysql://user:password@localhost:3306/new_support` |
+| `DASHBOARD_TOKEN` | Shared secret used by the `/api/tickets` endpoint (Chrome extension / webhook ingestion).     | `super-long-random-token` |
 
-### Pro Version
-- 5 Unique Dashboards: Analytics, Ecommerce, Marketing, CRM, Stocks (more coming soon)
-- 400+ dashboard components and UI elements
-- Complete Figma design file
-- Email support
+⛑️ **Tip:** When running migrations locally, grant the database user the `CREATE DATABASE` privilege so Prisma can create its shadow DB. Otherwise you’ll see `P3014/P1010` errors.
 
-To learn more about pro version features and pricing, visit our [pricing page](https://tailadmin.com/pricing).
+### 4. Database Setup
 
-## Changelog
+```bash
+# Create / migrate schema
+pnpm prisma migrate dev --name init
 
-### Version 2.0.2 - [March 25, 2025]
+# Generate the Prisma client (automatically run by migrate, but safe to repeat)
+pnpm prisma generate
+```
 
-- Upgraded to Next v15.2.3 for [CVE-2025-29927](https://nextjs.org/blog/cve-2025-29927) concerns
-- Included overrides vectormap for packages to prevent peer dependency errors during installation.
-- Migrated from react-flatpickr to flatpickr package for React 19 support
+### 5. Run the App
 
-### Version 2.0.1 - [February 27, 2025]
+```bash
+pnpm dev        # start next dev server on http://localhost:3000
+pnpm build      # production build (also runs lint/type-check)
+pnpm start      # run compiled app (after pnpm build)
+```
 
-#### Update Overview
+---
 
-- Upgraded to Tailwind CSS v4 for better performance and efficiency.
-- Updated class usage to match the latest syntax and features.
-- Replaced deprecated class and optimized styles.
+## Authentication & Sessions
 
-#### Next Steps
+- **Signup**: `POST /api/auth/signup` with `{ email, password, firstName?, lastName? }`.
+- **Login**: `POST /api/auth/login` with `{ email, password }`. Successful responses set an HttpOnly `session-token`.
+- **Logout**: `POST /api/auth/logout`.
+- **Profile**: `GET/PUT /api/profile` to retrieve/update personal data (bio, socials, avatar URL, contact info).
 
-- Run npm install or yarn install to update dependencies.
-- Check for any style changes or compatibility issues.
-- Refer to the Tailwind CSS v4 [Migration Guide](https://tailwindcss.com/docs/upgrade-guide) on this release. if needed.
-- This update keeps the project up to date with the latest Tailwind improvements. 🚀
+Sessions are stored in the `Session` table with a 7-day expiry. Cookies are managed server-side via the `attachSessionCookie` helper in `src/lib/auth.ts`.
 
-### v2.0.0 (February 2025)
-A major update focused on Next.js 15 implementation and comprehensive redesign.
+---
 
-#### Major Improvements
-- Complete redesign using Next.js 15 App Router and React Server Components
-- Enhanced user interface with Next.js-optimized components
-- Improved responsiveness and accessibility
-- New features including collapsible sidebar, chat screens, and calendar
-- Redesigned authentication using Next.js App Router and server actions
-- Updated data visualization using ApexCharts for React
+## Ticket Ingestion API
 
-#### Breaking Changes
+Endpoint: `POST /api/tickets`
 
-- Migrated from Next.js 14 to Next.js 15
-- Chart components now use ApexCharts for React
-- Authentication flow updated to use Server Actions and middleware
+- Protected by the `DASHBOARD_TOKEN` header (`Authorization: Bearer <token>`).
+- Upserts tickets by `id`.
+- Accepts optional `ownerId` or `ownerEmail` to auto-link records to a user.
+- Stores structured JSON for `clientMsgs` / `agentMsgs`.
 
-[Read more](https://tailadmin.com/docs/update-logs/nextjs) on this release.
+Sample payload:
 
-#### Breaking Changes
-- Migrated from Next.js 14 to Next.js 15
-- Chart components now use ApexCharts for React
-- Authentication flow updated to use Server Actions and middleware
+```bash
+curl -X POST http://localhost:3000/api/tickets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $DASHBOARD_TOKEN" \
+  -d '{
+    "id": "ABC-123-456",
+    "brand": "TicketBoss",
+    "clientName": "Acme Corp",
+    "subject": "Login lockout",
+    "status": "open",
+    "lastMessage": "Customer replied via portal",
+    "date": "2025-04-05T08:15:00Z",
+    "ownerEmail": "agent@example.com",
+    "clientMsgs": [{"ts":"2025-04-05T08:00:00Z","body":"Need help"}]
+  }'
+```
 
-### v1.3.4 (July 01, 2024)
-- Fixed JSvectormap rendering issues
+Related endpoints:
 
-### v1.3.3 (June 20, 2024)
-- Fixed build error related to Loader component
+- `GET /api/tickets` – quick inspection feed (dev only, CORS open for local extension).
+- `DELETE /api/tickets/:id` – removes a ticket **if** it belongs to the signed-in user or is currently unassigned.
 
-### v1.3.2 (June 19, 2024)
-- Added ClickOutside component for dropdown menus
-- Refactored sidebar components
-- Updated Jsvectormap package
+---
 
-### v1.3.1 (Feb 12, 2024)
-- Fixed layout naming consistency
-- Updated styles
+## Pages & Modules
 
-### v1.3.0 (Feb 05, 2024)
-- Upgraded to Next.js 14
-- Added Flatpickr integration
-- Improved form elements
-- Enhanced multiselect functionality
-- Added default layout component
+- `/` – Main dashboard (Ticket metrics, timeline chart, brand breakdown toggle, daily goal tracker, ticket activity).
+- `/dashboard/tickets` – Ticket card view with filters, calendar picker, pagination, and per-ticket actions.
+- `/today-league` – Leaderboard of today’s ticket counts per user plus an unassigned bucket.
+- `/profile` – Editable profile + avatar upload.
+- `/kpi`, `/tools` – Placeholders ready for future build-out.
+- `/signin`, `/signup` – Auth pages rendered by `src/app/(full-width-pages)/(auth)`.
+
+---
+
+## Project Scripts
+
+| Script            | What it does                                             |
+|-------------------|----------------------------------------------------------|
+| `pnpm dev`        | Runs Next.js in development mode                         |
+| `pnpm build`      | Production build + lint/type checks                      |
+| `pnpm start`      | Serves the built app (`.next`)                           |
+| `pnpm lint`       | ESLint (Next.js config)                                  |
+| `pnpm prisma ...` | Prisma CLI (migrate, studio, generate, etc.)             |
+
+---
+
+## Deployment Checklist
+
+1. Set `DATABASE_URL` and `DASHBOARD_TOKEN` in your hosting environment.
+2. Run `pnpm prisma migrate deploy` against the production database.
+3. Build & start the app (`pnpm build && pnpm start`) or use your platform’s adapter.
+4. Ensure your reverse proxy forwards HTTPS so cookies stay `secure`.
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| `Prisma Migrate could not create the shadow database (P3014/P1010)` | Grant your DB user `CREATE DATABASE` privileges or set `shadowDatabaseUrl` to a database where the user has rights. |
+| Cannot delete tickets from the Chrome extension feed | Only the ticket owner (or unassigned tickets) can be deleted. Either claim the ticket first or adjust the API logic to permit admin overrides. |
+| Login button appears unresponsive | Ensure the `/api/auth/login` call succeeds and that cookies are allowed (some browser extensions block third-party cookies on `localhost`). Check devtools network tab for errors. |
+
+---
 
 ## License
 
-Ticket Monitoring Next.js Free Version is released under the MIT License.
+This project is released under the MIT License. Feel free to adapt it for your own support organization—just keep the attribution if you distribute it publicly.
 
-## Support
+---
 
-If you find this project helpful, please consider giving it a star on GitHub. Your support helps us continue developing and maintaining this template.
+Need a hand extending Ticket Boss (extra analytics, integrations, or deployment help)? Open an issue or start a discussion! 🚀

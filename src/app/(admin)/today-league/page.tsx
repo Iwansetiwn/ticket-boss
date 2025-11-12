@@ -26,7 +26,7 @@ export default async function TodayTicketLeaguePage() {
   const grouped = await prisma.ticket.groupBy({
     by: ["ownerId"],
     where: {
-      updatedAt: { gte: startOfDay },
+      createdAt: { gte: startOfDay },
     },
     _count: { _all: true },
   })
