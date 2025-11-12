@@ -69,15 +69,7 @@ export default async function DashboardPage() {
     brandTodayRaw,
     issueCategoryRaw,
     recentTicketDates,
-  ] = await Promise.all<[
-    number,
-    number,
-    number,
-    BrandGroup[],
-    BrandGroup[],
-    IssueGroup[],
-    { createdAt: Date }[],
-  ]>([
+  ] = await Promise.all([
     prisma.ticket.count(),
     prisma.ticket.count({
       where: { createdAt: { gte: todayStart, lt: todayEnd } },
