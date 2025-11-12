@@ -1,48 +1,52 @@
 # Ticket Boss – Support Operations Dashboard
 
-Ticket Boss is an internal-facing operations dashboard built with **Next.js 15**, **React 19**, **Prisma**, and **Tailwind CSS v4**. It centralizes live ticket feeds (ingested via API/extension), helps support agents manage their own workload, and surfaces team-wide insights such as brand performance and the “Today Ticket League”.
+Ticket Boss is an internal operations console built with **Next.js 15**, **React 19**, **Prisma 6**, and **Tailwind CSS v4**. It gives support leads real-time visibility into ticket volume while providing agents a personal workspace to triage, update, and claim tickets.
 
 ![Ticket Boss Dashboard Preview](./banner.png)
 
 ---
 
-## Key Features
+## Highlights
 
-- **Secure email + password auth** with bcrypt hashing, session tokens, and HttpOnly cookies.
-- **Personal ticket workspace** with horizontal cards, calendar/date filtering, status filters, pagination, and owner-aware delete/claim actions.
-- **Dashboard analytics** including all-time vs today counts, adjustable daily goal tracker, brand breakdown (today vs all time) with tooltips, ticket activity timeline, and today-vs-yesterday performance.
-- **Today Ticket League** that ranks every signed-in user’s ticket count and highlights unassigned tickets still waiting to be claimed.
-- **Profile editor** so each agent can maintain contact information, biography, and upload their own avatar.
-- **Ticket ingestion API** designed for the Chrome extension or other systems. Upserts by ticket id, supports brand/client metadata, JSON payloads, and optional automatic assignment through `ownerEmail`.
-- **Dark/light mode**, responsive layout, and cleaned-up navigation (Dashboard, Tickets, KPI placeholder, Tools placeholder, Today Ticket League).
+- **Live ticket analytics** – server-side aggregates power the all-time/today metrics, adjustable goal tracker, per-brand donut (today vs all-time), issue comparison bars, and a 10-day timeline with timezone-aware labels.
+- **Actionable ticket workspace** – horizontal cards with search, status/date filters, pagination, calendar picker, inline editing, delete/restore, and a background refresh loop that only re-renders when records actually change.
+- **Today Ticket League** – leaderboard of every agent’s volume plus an “Unassigned” bucket so managers can spot unattended work.
+- **Notifications + toasts** – dropdown feed that marks read on open, background polling, and real-time toast previews for new ticket events.
+- **Profile + settings** – editable contact information, social links, and avatar uploader so internal data stays current.
+- **Dark/light theme** – sticky sidebar/header chrome with hover states, keyboard search focus (`⌘/Ctrl + K`), and high-contrast tooltips across both themes.
+- **Secure auth & sessions** – bcrypt password hashing, HttpOnly session tokens with 7-day TTL, and layout-level guards that redirect unauthenticated traffic.
+- **Ticket ingestion API** – Chrome extension / webhook friendly endpoint that upserts by ticket id, accepts JSON transcripts, and can auto-assign by `ownerEmail`.
 
 ---
 
 ## Tech Stack
 
-| Area            | Choices                                                                 |
-|-----------------|-------------------------------------------------------------------------|
-| Framework       | Next.js 15.2.3 (App Router, Server & Client Components)                 |
-| Language        | TypeScript + React 19                                                   |
-| Styling         | Tailwind CSS v4, CSS modules, custom design tokens                      |
-| Data / ORM      | Prisma 6 + MySQL                                                        |
-| Auth            | Custom session tokens, bcrypt password hashing                          |
-| Charts & UI     | ApexCharts, FullCalendar, custom cards/forms                            |
+| Area        | Details                                                                  |
+|-------------|--------------------------------------------------------------------------|
+| Framework   | Next.js 15.2.3 (App Router, server/client components)                    |
+| Language    | TypeScript + React 19                                                    |
+| Styling     | Tailwind CSS v4 with custom tokens, utility classes, and theme contexts  |
+| Data / ORM  | Prisma 6 + MySQL (shadow DB supported)                                   |
+| Auth        | Custom sessions, bcrypt, secure cookies                                  |
+| Charts      | ApexCharts (timeline + donut + gradients)                                |
+| UI Toolkit  | Custom cards/forms + FullCalendar, react-dnd, dropzone, etc.             |
 
 ---
 
-## Repository Layout
+## Project Structure
 
 ```
 src/
-├─ app/                     # App Router routes (dashboard, auth, API endpoints)
-├─ components/              # Reusable UI (cards, charts, profile widgets, forms)
-├─ layout/                  # Sidebar + header chrome
-├─ lib/                     # Prisma client, auth helpers
-├─ icons/, context/, etc.   # Supporting utilities
+├─ app/               # Routes, layouts, API handlers
+├─ components/        # Dashboard widgets, ticket cards, forms, dropdowns
+├─ context/           # Theme + sidebar providers
+├─ layout/            # Header, sidebar, backdrop shell
+├─ lib/               # Prisma client, auth helpers, ticket utilities
+├─ types/, hooks/, icons/ …
 prisma/
-└─ schema.prisma            # Ticket, User, Session models
-public/images/logo/         # Ticket Boss logomark (chart icon)
+├─ schema.prisma      # Ticket/User/Session/Notification models
+public/
+└─ images/, icons/, banner.png
 ```
 
 ---
@@ -51,141 +55,118 @@ public/images/logo/         # Ticket Boss logomark (chart icon)
 
 ### 1. Prerequisites
 
-- Node.js **18+** (20+ recommended)
+- Node.js **>=18** (20+ recommended)
 - pnpm 9+ (or npm/yarn if you prefer)
-- MySQL 8 (or compatible Aurora/RDS). The Prisma schema expects a MySQL connection string.
+- MySQL 8+ database with a user that can create a shadow database
 
-### 2. Install Dependencies
+### 2. Install dependencies
 
 ```bash
 pnpm install
-# or
-npm install
 ```
 
-### 3. Configure Environment Variables
+### 3. Environment variables (`.env`)
 
-Create a `.env` file with at least:
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `DATABASE_URL` | ✅ | MySQL connection string Prisma uses for reads/writes/migrations | `mysql://user:pass@localhost:3306/ticket_boss` |
+| `DASHBOARD_TOKEN` | ✅ | Bearer token expected by `/api/tickets` ingestion endpoint | `super-secret-string` |
+| `NEXT_PUBLIC_WORLDHOST_SUPPORT_INBOX_URL` | ⛔ optional | Overrides the fallback inbox link when we restore/import tickets | `https://admin.worldhost.group/admin/support/inbox` |
 
-| Variable          | Description                                                                                   | Example |
-|-------------------|-----------------------------------------------------------------------------------------------|---------|
-| `DATABASE_URL`    | Prisma connection string for MySQL. User must have permission to create a shadow database.    | `mysql://user:password@localhost:3306/new_support` |
-| `DASHBOARD_TOKEN` | Shared secret used by the `/api/tickets` endpoint (Chrome extension / webhook ingestion).     | `super-long-random-token` |
+> 💡 Give the DB user `CREATE DATABASE` so Prisma can spin up its shadow database; otherwise run with a `shadowDatabaseUrl`.
 
-⛑️ **Tip:** When running migrations locally, grant the database user the `CREATE DATABASE` privilege so Prisma can create its shadow DB. Otherwise you’ll see `P3014/P1010` errors.
-
-### 4. Database Setup
+### 4. Database
 
 ```bash
-# Create / migrate schema
-pnpm prisma migrate dev --name init
-
-# Generate the Prisma client (automatically run by migrate, but safe to repeat)
-pnpm prisma generate
+pnpm prisma migrate dev --name init   # create schema locally
+pnpm prisma generate                  # regenerate client (usually auto)
 ```
 
-### 5. Run the App
+### 5. Development & build scripts
 
-```bash
-pnpm dev        # start next dev server on http://localhost:3000
-pnpm build      # production build (also runs lint/type-check)
-pnpm start      # run compiled app (after pnpm build)
-```
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Run Next.js dev server on <http://localhost:3000> |
+| `pnpm lint` | ESLint + Next.js recommended rules |
+| `pnpm build` | Production build + type check |
+| `pnpm start` | Serve the built app (`pnpm build` first) |
+| `pnpm prisma migrate deploy` | Apply migrations in prod/CI |
 
 ---
 
 ## Authentication & Sessions
 
-- **Signup**: `POST /api/auth/signup` with `{ email, password, firstName?, lastName? }`.
-- **Login**: `POST /api/auth/login` with `{ email, password }`. Successful responses set an HttpOnly `session-token`.
-- **Logout**: `POST /api/auth/logout`.
-- **Profile**: `GET/PUT /api/profile` to retrieve/update personal data (bio, socials, avatar URL, contact info).
+- Signup: `POST /api/auth/signup` with `{ email, password, firstName?, lastName? }`
+- Login: `POST /api/auth/login` returns an HttpOnly `session-token`
+- Logout: `POST /api/auth/logout`
+- Profile: `GET/PUT /api/profile`
 
-Sessions are stored in the `Session` table with a 7-day expiry. Cookies are managed server-side via the `attachSessionCookie` helper in `src/lib/auth.ts`.
+Sessions live in the `Session` table (7-day TTL). `AdminLayout` fetches the current user via `getCurrentUser()` and redirects to `/signin` if missing.
 
 ---
 
-## Ticket Ingestion API
+## Ticket API Cheat Sheet
 
-Endpoint: `POST /api/tickets`
+```
+POST /api/tickets      # upsert ticket from extension/webhook (requires DASHBOARD_TOKEN)
+DELETE /api/tickets/:id  # soft delete if caller owns the ticket
+POST /api/tickets/restore # bring a ticket back (used by recycle bin UI)
+```
 
-- Protected by the `DASHBOARD_TOKEN` header (`Authorization: Bearer <token>`).
-- Upserts tickets by `id`.
-- Accepts optional `ownerId` or `ownerEmail` to auto-link records to a user.
-- Stores structured JSON for `clientMsgs` / `agentMsgs`.
-
-Sample payload:
+Payload example:
 
 ```bash
 curl -X POST http://localhost:3000/api/tickets \
-  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $DASHBOARD_TOKEN" \
+  -H "Content-Type: application/json" \
   -d '{
-    "id": "ABC-123-456",
-    "brand": "TicketBoss",
+    "id": "ACME-42",
+    "brand": "Hosting.com",
     "clientName": "Acme Corp",
-    "subject": "Login lockout",
+    "subject": "SSL renewal",
     "status": "open",
-    "lastMessage": "Customer replied via portal",
-    "date": "2025-04-05T08:15:00Z",
+    "lastMessage": "Waiting on CSR",
     "ownerEmail": "agent@example.com",
-    "clientMsgs": [{"ts":"2025-04-05T08:00:00Z","body":"Need help"}]
+    "clientMsgs": [{"ts":"2025-05-01T10:00:00Z","body":"Need help"}]
   }'
 ```
 
-Related endpoints:
-
-- `GET /api/tickets` – quick inspection feed (dev only, CORS open for local extension).
-- `DELETE /api/tickets/:id` – removes a ticket **if** it belongs to the signed-in user or is currently unassigned.
-
 ---
 
-## Pages & Modules
+## Deployment (Vercel-ready)
 
-- `/` – Main dashboard (Ticket metrics, timeline chart, brand breakdown toggle, daily goal tracker, ticket activity).
-- `/dashboard/tickets` – Ticket card view with filters, calendar picker, pagination, and per-ticket actions.
-- `/today-league` – Leaderboard of today’s ticket counts per user plus an unassigned bucket.
-- `/profile` – Editable profile + avatar upload.
-- `/kpi`, `/tools` – Placeholders ready for future build-out.
-- `/signin`, `/signup` – Auth pages rendered by `src/app/(full-width-pages)/(auth)`.
-
----
-
-## Project Scripts
-
-| Script            | What it does                                             |
-|-------------------|----------------------------------------------------------|
-| `pnpm dev`        | Runs Next.js in development mode                         |
-| `pnpm build`      | Production build + lint/type checks                      |
-| `pnpm start`      | Serves the built app (`.next`)                           |
-| `pnpm lint`       | ESLint (Next.js config)                                  |
-| `pnpm prisma ...` | Prisma CLI (migrate, studio, generate, etc.)             |
-
----
-
-## Deployment Checklist
-
-1. Set `DATABASE_URL` and `DASHBOARD_TOKEN` in your hosting environment.
-2. Run `pnpm prisma migrate deploy` against the production database.
-3. Build & start the app (`pnpm build && pnpm start`) or use your platform’s adapter.
-4. Ensure your reverse proxy forwards HTTPS so cookies stay `secure`.
+1. **Ignore build artifacts** – `.next/` is already listed in `.gitignore`. If it was ever committed, run `git rm -r --cached .next` and commit the removal.
+2. **Set env vars** in Vercel → Project Settings → Environment Variables (`DATABASE_URL`, `DASHBOARD_TOKEN`, optional inbox URL).
+3. **Migrations** – run `pnpm prisma migrate deploy` against the production DB (Vercel build hooks or a separate deploy step).
+4. **Import repo into Vercel** – Build command `pnpm build`, Output `.next`. Vercel auto-installs dependencies via pnpm.
+5. **Verify** – run through dashboard + ticket workspace to ensure Prisma is connected and cookies work on your domain.
 
 ---
 
 ## Troubleshooting
 
-| Issue | Fix |
-|-------|-----|
-| `Prisma Migrate could not create the shadow database (P3014/P1010)` | Grant your DB user `CREATE DATABASE` privileges or set `shadowDatabaseUrl` to a database where the user has rights. |
-| Cannot delete tickets from the Chrome extension feed | Only the ticket owner (or unassigned tickets) can be deleted. Either claim the ticket first or adjust the API logic to permit admin overrides. |
-| Login button appears unresponsive | Ensure the `/api/auth/login` call succeeds and that cookies are allowed (some browser extensions block third-party cookies on `localhost`). Check devtools network tab for errors. |
+| Issue | Suggested Fix |
+|-------|---------------|
+| Shadow DB errors (P3014/P1010) | Give the DB user `CREATE DATABASE` or configure `shadowDatabaseUrl`. |
+| Ticket refresh loop never updates | Ensure `/api/dashboard/tickets` returns JSON and that `DASHBOARD_TOKEN` matches the sender. Check browser console for fetch errors. |
+| Tooltip text invisible | Verify you are on the latest commit; CSS now forces light tooltip text to use `text-gray-900`. Clear cache if needed. |
+
+---
+
+## Publishing README Changes to GitHub
+
+1. Edit this `README.md` locally (already done if you’re reading this section!).
+2. Stage the file: `git add README.md`
+3. Commit: `git commit -m "docs: refresh README"`
+4. Push: `git push` (or `git push --set-upstream origin main` if you haven’t pushed this branch before).
+5. Refresh the repository page on GitHub to see the updated README.
 
 ---
 
 ## License
 
-This project is released under the MIT License. Feel free to adapt it for your own support organization—just keep the attribution if you distribute it publicly.
+MIT License – use it internally, fork it, or extend it for your org. Please keep attribution when distributing.
 
 ---
 
-Need a hand extending Ticket Boss (extra analytics, integrations, or deployment help)? Open an issue or start a discussion! 🚀
+Questions or feature ideas? Open an issue and we’ll jam on it. 🚀
