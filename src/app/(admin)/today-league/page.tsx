@@ -33,8 +33,10 @@ export default async function TodayTicketLeaguePage() {
     _count: { _all: true },
   })
 
-  const counts = new Map(
-    grouped.filter((g: OwnerGroup) => g.ownerId).map((g: OwnerGroup) => [g.ownerId!, g._count._all])
+  const counts = new Map<string, number>(
+    grouped
+      .filter((g: OwnerGroup): g is OwnerGroup & { ownerId: string } => Boolean(g.ownerId))
+      .map((g) => [g.ownerId, g._count._all])
   )
   const unassignedCount = grouped.find((g: OwnerGroup) => g.ownerId === null)?._count._all ?? 0
 
