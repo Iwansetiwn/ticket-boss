@@ -126,7 +126,7 @@ export default async function DashboardPage() {
     timelineBuckets.set(getTicketDayKey(day), 0);
   }
 
-  recentTicketDates.forEach((ticket) => {
+  recentTicketDates.forEach((ticket: { createdAt: Date }) => {
     const key = getTicketDayKey(ticket.createdAt);
     if (timelineBuckets.has(key)) {
       timelineBuckets.set(key, (timelineBuckets.get(key) ?? 0) + 1);
