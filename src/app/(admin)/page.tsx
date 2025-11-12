@@ -98,19 +98,22 @@ export default async function DashboardPage() {
     today: todayTickets,
   };
 
-  const brandAllData = toRankedBuckets(
+  type BrandGroup = { brand: string | null; _count: { _all: number } };
+  type IssueGroup = { issueCategory: string | null; _count: { _all: number } };
+
+  const brandAllData = toRankedBuckets<BrandGroup>(
     brandAllRaw,
     (item) => normalizeLabel(item.brand, "Unknown"),
     6
   ).map(({ label, count }) => ({ brand: label, count }));
 
-  const brandTodayData = toRankedBuckets(
+  const brandTodayData = toRankedBuckets<BrandGroup>(
     brandTodayRaw,
     (item) => normalizeLabel(item.brand, "Unknown"),
     6
   ).map(({ label, count }) => ({ brand: label, count }));
 
-  const issueComparisonData = toRankedBuckets(
+  const issueComparisonData = toRankedBuckets<IssueGroup>(
     issueCategoryRaw,
     (item) => normalizeLabel(item.issueCategory, "Uncategorized"),
     6
