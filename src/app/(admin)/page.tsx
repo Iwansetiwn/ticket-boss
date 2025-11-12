@@ -58,6 +58,9 @@ export default async function DashboardPage() {
   const timelineStart = new Date(todayStart);
   timelineStart.setUTCDate(timelineStart.getUTCDate() - (TIMELINE_DAYS - 1));
 
+  type BrandGroup = { brand: string | null; _count: { _all: number } };
+  type IssueGroup = { issueCategory: string | null; _count: { _all: number } };
+
   const [
     totalTickets,
     todayTickets,
@@ -66,7 +69,15 @@ export default async function DashboardPage() {
     brandTodayRaw,
     issueCategoryRaw,
     recentTicketDates,
-  ] = await Promise.all([
+  ] = await Promise.all<[
+    number,
+    number,
+    number,
+    BrandGroup[],
+    BrandGroup[],
+    IssueGroup[],
+    { createdAt: Date }[],
+  ]>([
     prisma.ticket.count(),
     prisma.ticket.count({
       where: { createdAt: { gte: todayStart, lt: todayEnd } },
@@ -97,9 +108,6 @@ export default async function DashboardPage() {
     total: totalTickets,
     today: todayTickets,
   };
-
-  type BrandGroup = { brand: string | null; _count: { _all: number } };
-  type IssueGroup = { issueCategory: string | null; _count: { _all: number } };
 
   const brandAllData = toRankedBuckets<BrandGroup>(
     brandAllRaw,
