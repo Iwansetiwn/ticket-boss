@@ -38,13 +38,20 @@ export default async function TodayTicketLeaguePage() {
   )
   const unassignedCount = grouped.find((g: OwnerGroup) => g.ownerId === null)?._count._all ?? 0
 
+  type Owner = {
+    id: string
+    name: string | null
+    email: string
+    avatarUrl: string | null
+  }
+
   const owners = await prisma.user.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true, email: true, avatarUrl: true },
   })
 
   const leaderboard = owners
-    .map((owner) => ({
+    .map((owner: Owner) => ({
       owner,
       count: counts.get(owner.id) ?? 0,
       rank: 0,
