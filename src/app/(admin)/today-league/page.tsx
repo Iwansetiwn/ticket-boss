@@ -23,6 +23,8 @@ export default async function TodayTicketLeaguePage() {
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
 
+  type OwnerGroup = { ownerId: string | null; _count: { _all: number } }
+
   const grouped = await prisma.ticket.groupBy({
     by: ["ownerId"],
     where: {
@@ -31,8 +33,10 @@ export default async function TodayTicketLeaguePage() {
     _count: { _all: true },
   })
 
-  const counts = new Map(grouped.filter((g) => g.ownerId).map((g) => [g.ownerId!, g._count._all]))
-  const unassignedCount = grouped.find((g) => g.ownerId === null)?._count._all ?? 0
+  const counts = new Map(
+    grouped.filter((g: OwnerGroup) => g.ownerId).map((g: OwnerGroup) => [g.ownerId!, g._count._all])
+  )
+  const unassignedCount = grouped.find((g: OwnerGroup) => g.ownerId === null)?._count._all ?? 0
 
   const owners = await prisma.user.findMany({
     orderBy: { name: "asc" },
