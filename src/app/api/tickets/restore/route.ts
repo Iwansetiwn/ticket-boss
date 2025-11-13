@@ -46,14 +46,14 @@ export async function POST(req: Request) {
 
   const ownerId = ticket.ownerId ?? user.id
 
-  const toJsonInput = (
-    value: unknown
-  ): Prisma.InputJsonValue | typeof Prisma.JsonNull => {
-    if (value === null || value === undefined) {
-      return Prisma.JsonNull
-    }
-    return value as Prisma.InputJsonValue
+const toJsonInput = (
+  value: unknown
+): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput => {
+  if (value === null || value === undefined) {
+    return Prisma.JsonNull
   }
+  return value as Prisma.InputJsonValue
+}
 
   try {
     const restored = await prisma.ticket.create({
