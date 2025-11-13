@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
 const toJsonInput = (
   value: unknown
-): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput => {
+): Prisma.InputJsonValue | Prisma.JsonNullValueInput => {
   if (value === null || value === undefined) {
     return Prisma.JsonNull
   }
