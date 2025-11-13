@@ -1,4 +1,3 @@
-import UserAddressCard from "@/components/user-profile/UserAddressCard";
 import UserInfoCard from "@/components/user-profile/UserInfoCard";
 import UserMetaCard from "@/components/user-profile/UserMetaCard";
 import { getCurrentUser } from "@/lib/auth";
@@ -27,7 +26,6 @@ export default async function Profile() {
         <div className="space-y-6">
           <UserMetaCard user={user} />
           <UserInfoCard user={user} />
-          <UserAddressCard user={user} />
         </div>
       </div>
     </div>

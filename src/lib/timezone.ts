@@ -1,0 +1,2 @@
+export const DASHBOARD_TIMEZONE_OFFSET_MINUTES = 8 * 60
+export const DASHBOARD_TIMEZONE_LABEL = "GMT+8 (Indonesia)"

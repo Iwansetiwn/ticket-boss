@@ -4,11 +4,17 @@ import { redirect } from "next/navigation"
 
 import prisma from "@/lib/prisma"
 import { getCurrentUser } from "@/lib/auth"
+import { getUtcDayBounds } from "@/lib/ticketIdentifier"
+import { DASHBOARD_TIMEZONE_LABEL, DASHBOARD_TIMEZONE_OFFSET_MINUTES } from "@/lib/timezone"
 
 export const metadata: Metadata = {
   title: "Today Ticket League | Ticket Monitoring",
   description: "Live leaderboard showing ticket counts by teammate for today.",
 }
+
+const TIMEZONE_LABEL = DASHBOARD_TIMEZONE_LABEL
+const TIMEZONE_OFFSET_MINUTES = DASHBOARD_TIMEZONE_OFFSET_MINUTES
+const MS_PER_MINUTE = 60 * 1000
 
 function formatCount(count: number) {
   return count.toLocaleString()
@@ -20,8 +26,9 @@ export default async function TodayTicketLeaguePage() {
     redirect("/signin")
   }
 
-  const startOfDay = new Date()
-  startOfDay.setHours(0, 0, 0, 0)
+  const now = new Date()
+  const { start: startOfDay } = getUtcDayBounds(now, TIMEZONE_OFFSET_MINUTES)
+  const displayStartOfDay = new Date(startOfDay.getTime() + TIMEZONE_OFFSET_MINUTES * MS_PER_MINUTE)
 
   type OwnerGroup = { ownerId: string | null; _count: { _all: number } }
 
@@ -91,8 +98,7 @@ export default async function TodayTicketLeaguePage() {
           <p className="text-sm uppercase tracking-wide text-brand-500">Today&apos;s League</p>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Ticket count by teammate</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Updated {new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(startOfDay)} — total tickets today:
-            {" "}
+            Updated {new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(displayStartOfDay)} ({TIMEZONE_LABEL}) — total tickets today:{" "}
             <span className="font-semibold text-gray-900 dark:text-white">{formatCount(totalToday)}</span>
           </p>
         </div>

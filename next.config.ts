@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  swcMinify: true,
+  poweredByHeader: false,
+  compress: true,
+  output: "standalone",
+  eslint: {
+    // speed up CI builds; lint via separate job when needed
+    ignoreDuringBuilds: true,
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

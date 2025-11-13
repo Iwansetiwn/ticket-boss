@@ -49,7 +49,11 @@ export default function TicketBrandBreakdown({ allTime, today }: Props) {
         padding: { top: -10, bottom: -10 },
       },
       tooltip: {
+        theme: "light",
         fillSeriesColor: false,
+        style: {
+          fontFamily: "Outfit, sans-serif",
+        },
         y: {
           formatter: (val: number, opts) => {
             const percent = totalTickets ? ((val / totalTickets) * 100).toFixed(1) : "0.0";

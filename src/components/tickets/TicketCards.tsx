@@ -151,8 +151,30 @@ export default function TicketCards({ tickets, initialPageSize = 8, liveRefreshI
   }, [tickets]);
 
   useEffect(() => {
-    if (!liveRefreshInterval || liveRefreshInterval < 5000) return;
+    const minInterval = 4000;
+    const baseInterval = Math.max(liveRefreshInterval ?? minInterval, minInterval);
+    const idleInterval = baseInterval * 3;
     let isMounted = true;
+    let timeoutId: number | null = null;
+
+    const watchedFields: Array<keyof TicketCardData> = [
+      "updatedAt",
+      "status",
+      "ticketUrl",
+      "issueCategory",
+      "subject",
+      "product",
+      "brand",
+      "clientName"
+    ];
+
+    const scheduleNextPoll = () => {
+      if (!isMounted) return;
+      const delay = document.visibilityState === "visible" ? baseInterval : idleInterval;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(fetchLatestTickets, delay);
+    };
+
     async function fetchLatestTickets() {
       try {
         const response = await fetch("/api/dashboard/tickets", { cache: "no-store" });
@@ -166,12 +188,8 @@ export default function TicketCards({ tickets, initialPageSize = 8, liveRefreshI
             prev.length !== incoming.length ||
             incoming.some((ticket) => {
               const previous = prev.find((item) => item.id === ticket.id);
-              return (
-                !previous ||
-                previous.updatedAt !== ticket.updatedAt ||
-                previous.status !== ticket.status ||
-                previous.ticketUrl !== ticket.ticketUrl
-              );
+              if (!previous) return true;
+              return watchedFields.some((field) => previous[field] !== ticket[field]);
             }) ||
             prev.some((ticket) => !nextIds.has(ticket.id));
 
@@ -179,15 +197,21 @@ export default function TicketCards({ tickets, initialPageSize = 8, liveRefreshI
         });
       } catch (error) {
         console.error("Failed to refresh tickets", error);
+      } finally {
+        scheduleNextPoll();
       }
     }
 
     fetchLatestTickets();
-    const intervalId = window.setInterval(fetchLatestTickets, liveRefreshInterval);
+
+    const handleVisibility = () => scheduleNextPoll();
+
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       isMounted = false;
-      window.clearInterval(intervalId);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [liveRefreshInterval]);
 

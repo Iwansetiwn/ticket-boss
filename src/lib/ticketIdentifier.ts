@@ -1,5 +1,13 @@
+import { DASHBOARD_TIMEZONE_OFFSET_MINUTES } from "@/lib/timezone"
+
 const DAILY_SUFFIX_DELIMITER = "__day__"
 const DATE_KEY_REGEX = /^\d{4}-\d{2}-\d{2}$/
+const MS_PER_MINUTE = 60 * 1000
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+function applyOffset(date: Date, offsetMinutes: number) {
+  return new Date(date.getTime() + offsetMinutes * MS_PER_MINUTE)
+}
 
 export function stripDailyTicketSuffix(ticketId: string) {
   if (!ticketId) return ticketId
@@ -25,8 +33,9 @@ export function resolveReferenceDate(raw?: string | null) {
   return new Date()
 }
 
-export function getTicketDayKey(date: Date) {
-  return date.toISOString().slice(0, 10)
+export function getTicketDayKey(date: Date, offsetMinutes = DASHBOARD_TIMEZONE_OFFSET_MINUTES) {
+  const zonedDate = applyOffset(date, offsetMinutes)
+  return zonedDate.toISOString().slice(0, 10)
 }
 
 export function buildDailyTicketId(baseId: string, date: Date) {
@@ -35,9 +44,14 @@ export function buildDailyTicketId(baseId: string, date: Date) {
   return `${normalized}${DAILY_SUFFIX_DELIMITER}${dayKey}`
 }
 
-export function getUtcDayBounds(date: Date) {
-  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  const end = new Date(start)
-  end.setUTCDate(end.getUTCDate() + 1)
+export function getUtcDayBounds(date: Date, offsetMinutes = DASHBOARD_TIMEZONE_OFFSET_MINUTES) {
+  const zonedDate = applyOffset(date, offsetMinutes)
+  const startLocalUtc = Date.UTC(
+    zonedDate.getUTCFullYear(),
+    zonedDate.getUTCMonth(),
+    zonedDate.getUTCDate()
+  )
+  const start = new Date(startLocalUtc - offsetMinutes * MS_PER_MINUTE)
+  const end = new Date(start.getTime() + MS_PER_DAY)
   return { start, end }
 }

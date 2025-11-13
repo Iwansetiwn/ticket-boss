@@ -26,8 +26,7 @@ export default function NotificationDropdown() {
   const [error, setError] = useState<string | null>(null);
   const [isMarking, setIsMarking] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [toastQueue, setToastQueue] = useState<NotificationItem[]>([]);
-  const [activeToast, setActiveToast] = useState<NotificationItem | null>(null);
+  const [pinnedToasts, setPinnedToasts] = useState<NotificationItem[]>([]);
   const [isClearing, setIsClearing] = useState(false);
   const seenNotificationsRef = useRef<Set<string>>(new Set());
   const initialLoadRef = useRef(true);
@@ -82,7 +81,11 @@ export default function NotificationDropdown() {
         const orderedFresh = [...fresh].sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
-        setToastQueue((prev) => [...prev, ...orderedFresh]);
+        setPinnedToasts((prev) => {
+          const existing = new Set(prev.map((notification) => notification.id));
+          const dedupedFresh = orderedFresh.filter((notification) => !existing.has(notification.id));
+          return [...dedupedFresh, ...prev];
+        });
       }
 
       seenNotificationsRef.current = nextIds;
@@ -121,9 +124,35 @@ export default function NotificationDropdown() {
   }, [syncNotificationState]);
 
   useEffect(() => {
-    fetchNotifications();
-    const intervalId = window.setInterval(fetchNotifications, 30_000);
-    return () => window.clearInterval(intervalId);
+    const ACTIVE_POLL_MS = 5_000;
+    const IDLE_POLL_MS = 30_000;
+    let timeoutId: number | null = null;
+
+    const schedule = (delay: number) => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(async () => {
+        await fetchNotifications();
+        const nextDelay = document.visibilityState === "visible" ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+        schedule(nextDelay);
+      }, delay);
+    };
+
+    fetchNotifications().finally(() => {
+      const initialDelay = document.visibilityState === "visible" ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+      schedule(initialDelay);
+    });
+
+    const handleVisibility = () => {
+      const delay = document.visibilityState === "visible" ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+      schedule(delay);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [fetchNotifications]);
 
   const markNotificationsRead = useCallback(async () => {
@@ -155,25 +184,14 @@ export default function NotificationDropdown() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!activeToast && toastQueue.length > 0) {
-      setActiveToast(toastQueue[0]);
-      setToastQueue((prev) => prev.slice(1));
-    }
-  }, [toastQueue, activeToast]);
-
-  useEffect(() => {
-    if (!activeToast) return;
-    const timeout = window.setTimeout(() => setActiveToast(null), 7000);
-    return () => window.clearTimeout(timeout);
-  }, [activeToast]);
-
-  const dismissToast = () => setActiveToast(null);
+  const dismissToast = (id: string) => {
+    setPinnedToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const handleToastView = async (notification: NotificationItem) => {
     await markSpecificNotificationsRead([notification.id]);
     router.push(`/dashboard/tickets/${notification.ticketId}`);
-    dismissToast();
+    dismissToast(notification.id);
   };
 
   useEffect(() => {
@@ -195,8 +213,7 @@ export default function NotificationDropdown() {
         throw new Error("Failed to clear notifications");
       }
       setNotifications([]);
-      setToastQueue([]);
-      setActiveToast(null);
+      setPinnedToasts([]);
       seenNotificationsRef.current = new Set();
     } catch (err) {
       console.error("Notification clear failed:", err);
@@ -330,40 +347,69 @@ export default function NotificationDropdown() {
         </div>
       </Dropdown>
 
-      {activeToast && (
-        <div className="fixed bottom-6 right-6 z-[1100] w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl transition dark:border-gray-700 dark:bg-gray-900">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">New ticket logged</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {activeToast.ticketSubject || `Ticket ${stripDailyTicketSuffix(activeToast.ticketId)}`}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                {formatRelativeTimestamp(activeToast.createdAt)} • {absoluteFormatter.format(new Date(activeToast.createdAt))}
-              </p>
-            </div>
-            <button
-              onClick={dismissToast}
-              aria-label="Dismiss notification"
-              className="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
+      {pinnedToasts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-[1100] flex w-full max-w-md flex-col gap-4">
+          {pinnedToasts.map((toast) => (
+            <article
+              key={toast.id}
+              className="rounded-3xl border border-gray-200/80 bg-white/90 p-5 shadow-2xl backdrop-blur-lg transition dark:border-white/10 dark:bg-gray-900/90"
             >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M4.41077 4.41074C4.7362 4.08531 5.26384 4.08531 5.58927 4.41074L10.0006 8.82207L14.4119 4.41074C14.7373 4.08531 15.265 4.08531 15.5904 4.41074C15.9158 4.73617 15.9158 5.2638 15.5904 5.58924L11.1791 10.0006L15.5904 14.4119C15.9158 14.7373 15.9158 15.265 15.5904 15.5904C15.265 15.9158 14.7373 15.9158 14.4119 15.5904L10.0006 11.1791L5.58927 15.5904C5.26384 15.9158 4.7362 15.9158 4.41077 15.5904C4.08534 15.265 4.08534 14.7373 4.41077 14.4119L8.8221 10.0006L4.41077 5.58924C4.08534 5.26381 4.08534 4.73617 4.41077 4.41074Z"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="mt-4 flex items-center justify-end gap-3">
-            <button
-              onClick={() => handleToastView(activeToast)}
-              className="rounded-full bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-600"
-            >
-              View ticket
-            </button>
-          </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2.5c-.69 0-1.25.56-1.25 1.25V4.3a7.5 7.5 0 0 0-6.25 7.2v4.65H4a1.25 1.25 0 0 0 0 2.5h16a1.25 1.25 0 0 0 0-2.5h-.5v-4.65a7.5 7.5 0 0 0-6.25-7.2v-.55c0-.69-.56-1.25-1.25-1.25ZM8.75 20.5c0 .69.56 1.25 1.25 1.25h4c.69 0 1.25-.56 1.25-1.25s-.56-1.25-1.25-1.25h-4c-.69 0-1.25.56-1.25 1.25Z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">New ticket logged</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {toast.ticketSubject || `Ticket ${stripDailyTicketSuffix(toast.ticketId)}`}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">
+                    Please update the ticket&apos;s categories so routing and reporting stay accurate.
+                  </p>
+                </div>
+                <button
+                  onClick={() => dismissToast(toast.id)}
+                  aria-label="Dismiss notification"
+                  className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-200"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M4.41077 4.41074C4.7362 4.08531 5.26384 4.08531 5.58927 4.41074L10.0006 8.82207L14.4119 4.41074C14.7373 4.08531 15.265 4.08531 15.5904 4.41074C15.9158 4.73617 15.9158 5.2638 15.5904 5.58924L11.1791 10.0006L15.5904 14.4119C15.9158 14.7373 15.9158 15.265 15.5904 15.5904C15.265 15.9158 14.7373 15.9158 14.4119 15.5904L10.0006 11.1791L5.58927 15.5904C5.26384 15.9158 4.7362 15.9158 4.41077 15.5904C4.08534 15.265 4.08534 14.7373 4.41077 14.4119L8.8221 10.0006L4.41077 5.58924C4.08534 5.26381 4.08534 4.73617 4.41077 4.41074Z"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600 dark:bg-white/10 dark:text-gray-100">
+                  {stripDailyTicketSuffix(toast.ticketId)}
+                </span>
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200">
+                  Category pending
+                </span>
+                <span>
+                  Logged {formatRelativeTimestamp(toast.createdAt)} • {absoluteFormatter.format(new Date(toast.createdAt))}
+                </span>
+              </div>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  onClick={() => handleToastView(toast)}
+                  className="flex-1 rounded-2xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-600"
+                >
+                  Review ticket
+                </button>
+                <button
+                  onClick={() => dismissToast(toast.id)}
+                  className="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-gray-300 hover:text-gray-800 dark:border-white/10 dark:text-gray-200 dark:hover:border-white/30"
+                >
+                  Mark later
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       )}
     </div>

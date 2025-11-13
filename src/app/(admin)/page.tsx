@@ -8,6 +8,7 @@ import TicketPerfCard from "@/components/dashboard/TicketPerfCard";
 import TicketIssueComparison from "@/components/dashboard/TicketIssueComparison";
 import prisma from "@/lib/prisma";
 import { getTicketDayKey, getUtcDayBounds } from "@/lib/ticketIdentifier";
+import { DASHBOARD_TIMEZONE_LABEL, DASHBOARD_TIMEZONE_OFFSET_MINUTES } from "@/lib/timezone";
 
 export const metadata: Metadata = {
   title: "Ticket Monitoring Dashboard",
@@ -20,7 +21,8 @@ type TicketSummary = {
 };
 
 const TIMELINE_DAYS = 10;
-const TIMEZONE_LABEL = "UTC";
+const TIMEZONE_LABEL = DASHBOARD_TIMEZONE_LABEL;
+const TIMEZONE_OFFSET_MINUTES = DASHBOARD_TIMEZONE_OFFSET_MINUTES;
 
 const normalizeLabel = (value: string | null | undefined, fallback: string) => {
   const trimmed = value?.trim();
@@ -47,12 +49,13 @@ const toRankedBuckets = <T extends { _count: { _all: number } }>(
 
 export default async function DashboardPage() {
   const now = new Date();
-  const { start: todayStart, end: todayEnd } = getUtcDayBounds(now);
+  const { start: todayStart, end: todayEnd } = getUtcDayBounds(now, TIMEZONE_OFFSET_MINUTES);
 
   const yesterdayReference = new Date(todayStart);
   yesterdayReference.setUTCDate(yesterdayReference.getUTCDate() - 1);
   const { start: yesterdayStart, end: yesterdayEnd } = getUtcDayBounds(
-    yesterdayReference
+    yesterdayReference,
+    TIMEZONE_OFFSET_MINUTES
   );
 
   const timelineStart = new Date(todayStart);
@@ -123,11 +126,11 @@ export default async function DashboardPage() {
   for (let i = TIMELINE_DAYS - 1; i >= 0; i -= 1) {
     const day = new Date(todayStart);
     day.setUTCDate(day.getUTCDate() - i);
-    timelineBuckets.set(getTicketDayKey(day), 0);
+    timelineBuckets.set(getTicketDayKey(day, TIMEZONE_OFFSET_MINUTES), 0);
   }
 
   recentTicketDates.forEach((ticket: { createdAt: Date }) => {
-    const key = getTicketDayKey(ticket.createdAt);
+    const key = getTicketDayKey(ticket.createdAt, TIMEZONE_OFFSET_MINUTES);
     if (timelineBuckets.has(key)) {
       timelineBuckets.set(key, (timelineBuckets.get(key) ?? 0) + 1);
     }

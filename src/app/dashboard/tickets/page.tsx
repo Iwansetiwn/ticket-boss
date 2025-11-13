@@ -28,5 +28,5 @@ export default async function TicketsPage() {
     updatedAt: t.updatedAt.toISOString(),
   }))
 
-  return <TicketCards tickets={safe} liveRefreshInterval={15000} />
+  return <TicketCards tickets={safe} liveRefreshInterval={5000} />
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AuthUser } from "@/lib/auth";
 import { useModal } from "@/hooks/useModal";
@@ -18,66 +18,13 @@ type MetaForm = {
   firstName: string;
   lastName: string;
   location: string;
-  facebook: string;
-  twitter: string;
-  linkedin: string;
-  instagram: string;
   avatarUrl: string;
 };
-
-const socialIcons: Array<{
-  key: keyof Pick<MetaForm, "facebook" | "twitter" | "linkedin" | "instagram">;
-  label: string;
-  icon: React.ReactNode;
-}> = [
-  {
-    key: "facebook",
-    label: "Facebook",
-    icon: (
-      <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M11.6666 11.2503H13.7499L14.5833 7.91699H11.6666V6.25033C11.6666 5.39251 11.6666 4.58366 13.3333 4.58366H14.5833V1.78374C14.3118 1.7477 13.2858 1.66699 12.2023 1.66699C9.94025 1.66699 8.33325 3.04771 8.33325 5.58342V7.91699H5.83325V11.2503H8.33325V18.3337H11.6666V11.2503Z" />
-      </svg>
-    ),
-  },
-  {
-    key: "twitter",
-    label: "X",
-    icon: (
-      <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M15.1708 1.875H17.9274L11.9049 8.75833L18.9899 18.125H13.4424L9.09742 12.4442L4.12578 18.125H1.36745L7.80912 10.7625L1.01245 1.875H6.70078L10.6283 7.0675L15.1708 1.875ZM14.2033 16.475H15.7308L5.87078 3.43833H4.23162L14.2033 16.475Z" />
-      </svg>
-    ),
-  },
-  {
-    key: "linkedin",
-    label: "LinkedIn",
-    icon: (
-      <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M5.78381 4.16645C5.78351 4.84504 5.37181 5.45569 4.74286 5.71045C4.11391 5.96521 3.39331 5.81321 2.92083 5.32613C2.44836 4.83904 2.31837 4.11413 2.59022 3.50564C2.86207 2.89715 3.48369 2.50695 4.16648 2.50041C5.11432 2.49181 5.78871 3.18731 5.78381 4.16645ZM5.83381 6.87507H2.49931V17.5001H5.83381V6.87507ZM11.6666 6.87507H8.34164V17.5001H11.6252V11.8117C11.6252 8.58819 15.8089 8.29444 15.8089 11.8117V17.5001H19.1666V10.3944C19.1666 4.88819 12.9089 5.09194 11.6252 7.80382L11.6666 6.87507Z" />
-      </svg>
-    ),
-  },
-  {
-    key: "instagram",
-    label: "Instagram",
-    icon: (
-      <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M13.3333 1.66699H6.66659C3.90516 1.66699 1.66659 3.90557 1.66659 6.66699V13.3337C1.66659 16.0951 3.90516 18.3337 6.66659 18.3337H13.3333C16.0947 18.3337 18.3333 16.0951 18.3333 13.3337V6.66699C18.3333 3.90557 16.0947 1.66699 13.3333 1.66699ZM16.6666 13.3337C16.6666 15.1706 15.1702 16.667 13.3333 16.667H6.66659C4.82964 16.667 3.33325 15.1706 3.33325 13.3337V6.66699C3.33325 4.83004 4.82964 3.33366 6.66659 3.33366H13.3333C15.1702 3.33366 16.6666 4.83004 16.6666 6.66699V13.3337Z" />
-        <path d="M10.0001 5.83301C7.69986 5.83301 5.8335 7.69937 5.8335 9.99967C5.8335 12.2999 7.69986 14.1663 10.0001 14.1663C12.3004 14.1663 14.1668 12.2999 14.1668 9.99967C14.1668 7.69937 12.3004 5.83301 10.0001 5.83301ZM10.0001 12.4997C8.62242 12.4997 7.50016 11.3774 7.50016 9.99967C7.50016 8.62193 8.62242 7.49967 10.0001 7.49967C11.3779 7.49967 12.5002 8.62193 12.5002 9.99967C12.5002 11.3774 11.3779 12.4997 10.0001 12.4997Z" />
-        <path d="M14.5833 5.83318C14.9595 5.83318 15.2666 5.52608 15.2666 5.14985C15.2666 4.77361 14.9595 4.46651 14.5833 4.46651C14.2071 4.46651 13.8999 4.77361 13.8999 5.14985C13.8999 5.52608 14.2071 5.83318 14.5833 5.83318Z" />
-      </svg>
-    ),
-  },
-];
 
 const getInitialForm = (user: AuthUser): MetaForm => ({
   firstName: user.firstName ?? user.email.split("@")[0],
   lastName: user.lastName ?? "",
   location: user.location ?? "",
-  facebook: user.facebook ?? "",
-  twitter: user.twitter ?? "",
-  linkedin: user.linkedin ?? "",
-  instagram: user.instagram ?? "",
   avatarUrl: user.avatarUrl ?? "",
 });
 
@@ -87,10 +34,33 @@ export default function UserMetaCard({ user }: Props) {
   const [form, setForm] = useState<MetaForm>(() => getInitialForm(user));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>(() => user.avatarUrl ?? "");
+  const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState(false);
+  const [avatarStatus, setAvatarStatus] = useState<string>(() =>
+    user.avatarUrl ? "Photo uploaded" : "No file chosen"
+  );
+
+  const updateAvatarPreview = useCallback((nextPreview: string) => {
+    setAvatarPreview((prev) => {
+      releasePreview(prev);
+      return nextPreview;
+    });
+  }, []);
+
+  const resetLocalState = useCallback(() => {
+    setForm(getInitialForm(user));
+    const nextAvatar = user.avatarUrl ?? "";
+    updateAvatarPreview(nextAvatar);
+    setAvatarStatus(nextAvatar ? "Photo uploaded" : "No file chosen");
+    setPendingAvatar(null);
+    setPendingRemoval(false);
+    setError(null);
+  }, [updateAvatarPreview, user]);
 
   useEffect(() => {
-    setForm(getInitialForm(user));
-  }, [user]);
+    resetLocalState();
+  }, [resetLocalState]);
 
   const displayName = useMemo(() => {
     if (user.firstName || user.lastName) {
@@ -100,7 +70,6 @@ export default function UserMetaCard({ user }: Props) {
   }, [user]);
 
   const locationText = user.location || "Add your location from the edit modal";
-  const avatarPreview = form.avatarUrl || "";
 
   const handleChange =
     (key: keyof MetaForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,50 +83,95 @@ export default function UserMetaCard({ user }: Props) {
     setError(null);
 
     try {
+      let avatarUrl = form.avatarUrl;
+
+      if (pendingAvatar) {
+        const formData = new FormData();
+        formData.append("avatar", pendingAvatar);
+        const uploadResponse = await fetch("/api/profile/avatar", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadPayload = (await uploadResponse.json().catch(() => ({}))) as {
+          avatarUrl?: string;
+          error?: string;
+        };
+        if (!uploadResponse.ok || !uploadPayload.avatarUrl) {
+          throw new Error(uploadPayload?.error || "Failed to upload avatar.");
+        }
+        avatarUrl = uploadPayload.avatarUrl;
+      } else if (pendingRemoval) {
+        const deleteResponse = await fetch("/api/profile/avatar", { method: "DELETE" });
+        const deletePayload = (await deleteResponse.json().catch(() => ({}))) as { error?: string };
+        if (!deleteResponse.ok) {
+          throw new Error(deletePayload?.error || "Failed to remove avatar.");
+        }
+        avatarUrl = "";
+      }
+
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, avatarUrl }),
       });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setError(data?.error || "Failed to update profile.");
-        setSaving(false);
-        return;
+        throw new Error(data?.error || "Failed to update profile.");
       }
 
+      resetLocalState();
       closeModal();
       router.refresh();
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setError(message);
+    } finally {
       setSaving(false);
     }
   }
 
-  const renderSocialButton = (key: typeof socialIcons[number]["key"]) => {
-    const href = user[key] || "#";
-    const disabled = !user[key];
-    return {
-      href,
-      disabled,
-    };
-  };
-
-  function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+
     if (file.size > 2 * 1024 * 1024) {
       setError("Please choose an image under 2MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setForm((prev) => ({ ...prev, avatarUrl: reader.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
+
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files are supported.");
+      return;
+    }
+
+    setError(null);
+    setPendingRemoval(false);
+
+    const tempUrl = URL.createObjectURL(file);
+    updateAvatarPreview(tempUrl);
+    setAvatarStatus(file.name);
+    setPendingAvatar(file);
+  }
+
+  function handleAvatarRemove() {
+    if (!avatarPreview) return;
+    setPendingAvatar(null);
+    setPendingRemoval(true);
+    updateAvatarPreview("");
+    setAvatarStatus("Photo will be removed");
+    setForm((prev) => ({ ...prev, avatarUrl: "" }));
+  }
+
+  function handleModalClose() {
+    resetLocalState();
+    closeModal();
+  }
+
+  function releasePreview(url?: string) {
+    if (url && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
   }
 
   return (
@@ -185,25 +199,6 @@ export default function UserMetaCard({ user }: Props) {
                 <p className="text-sm text-gray-500 dark:text-gray-400">{locationText}</p>
               </div>
             </div>
-            <div className="flex items-center order-2 gap-2 grow xl:order-3 xl:justify-end">
-              {socialIcons.map((icon) => {
-                const { href, disabled } = renderSocialButton(icon.key);
-                return (
-                  <a
-                    key={icon.key}
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-disabled={disabled}
-                    className={`flex h-11 w-11 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 ${
-                      disabled ? "pointer-events-none opacity-40" : ""
-                    }`}
-                  >
-                    {icon.icon}
-                  </a>
-                );
-              })}
-            </div>
           </div>
 
           <button
@@ -222,7 +217,7 @@ export default function UserMetaCard({ user }: Props) {
         </div>
       </div>
 
-      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
+      <Modal isOpen={isOpen} onClose={handleModalClose} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">Edit Profile Headline</h4>
@@ -256,36 +251,43 @@ export default function UserMetaCard({ user }: Props) {
                 <h5 className="mb-4 text-lg font-medium text-gray-800 dark:text-white/90">
                   Profile Photo
                 </h5>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:file:bg-white/10 dark:file:text-gray-200"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG or JPG up to 2MB.</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="flex flex-col gap-1">
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      onChange={handleAvatarChange}
+                      disabled={saving}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className={`inline-flex h-10 min-w-[140px] items-center justify-center rounded-full border border-gray-300 px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/[0.06] ${
+                        saving ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                      }`}
+                    >
+                      Choose file
+                    </label>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAvatarRemove}
+                    disabled={!avatarPreview || saving}
+                    className={`inline-flex h-10 min-w-[140px] items-center justify-center rounded-full border px-4 text-sm font-medium transition ${
+                      !avatarPreview || saving
+                        ? "cursor-not-allowed border-gray-300 text-gray-400 opacity-60 dark:border-gray-700 dark:text-gray-500"
+                        : "cursor-pointer border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    Remove photo
+                  </button>
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{avatarStatus}</span>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WebP up to 2MB.</p>
               </div>
 
-              <div>
-                <h5 className="mb-4 text-lg font-medium text-gray-800 dark:text-white/90">Social Links</h5>
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input type="url" value={form.facebook} onChange={handleChange("facebook")} />
-                  </div>
-                  <div>
-                    <Label>X (Twitter)</Label>
-                    <Input type="url" value={form.twitter} onChange={handleChange("twitter")} />
-                  </div>
-                  <div>
-                    <Label>LinkedIn</Label>
-                    <Input type="url" value={form.linkedin} onChange={handleChange("linkedin")} />
-                  </div>
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input type="url" value={form.instagram} onChange={handleChange("instagram")} />
-                  </div>
-                </div>
-              </div>
             </div>
 
             {error && (
@@ -295,10 +297,15 @@ export default function UserMetaCard({ user }: Props) {
             )}
 
             <div className="flex items-center gap-3 px-2 lg:justify-end">
-              <Button size="sm" variant="outline" type="button" onClick={closeModal}>
+              <Button size="sm" variant="outline" type="button" onClick={handleModalClose}>
                 Cancel
               </Button>
-              <Button size="sm" type="submit" disabled={saving}>
+              <Button
+                size="sm"
+                type="submit"
+                disabled={saving}
+                className={saving ? "bg-brand-500 text-white hover:bg-brand-500" : undefined}
+              >
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
