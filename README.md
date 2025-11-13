@@ -72,6 +72,7 @@ pnpm install
 | `DATABASE_URL` | ✅ | MySQL connection string Prisma uses for reads/writes/migrations | `mysql://user:pass@localhost:3306/ticket_boss` |
 | `DASHBOARD_TOKEN` | ✅ | Bearer token expected by `/api/tickets` ingestion endpoint | `super-secret-string` |
 | `NEXT_PUBLIC_WORLDHOST_SUPPORT_INBOX_URL` | ⛔ optional | Overrides the fallback inbox link when we restore/import tickets | `https://admin.worldhost.group/admin/support/inbox` |
+| `TICKET_API_ALLOWED_ORIGINS` | ⛔ optional | Comma-separated list of Origins allowed to hit `/api/tickets` from the browser; leave empty to allow all | `https://chrome-extension-id`, `https://ticket.ngiring.com` |
 
 > 💡 Give the DB user `CREATE DATABASE` so Prisma can spin up its shadow database; otherwise run with a `shadowDatabaseUrl`.
 

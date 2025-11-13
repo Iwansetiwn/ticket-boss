@@ -10,17 +10,43 @@ function normalizeNotificationMessage(subject: string, clientName: string, body?
   return (condensed && condensed.length > 0 ? condensed : fallback).slice(0, 280)
 }
 
-// Enable CORS so your Chrome extension can POST data
-function cors(res: NextResponse) {
-  res.headers.set("Access-Control-Allow-Origin", "*") // For development only
+const allowedOrigins =
+  process.env.TICKET_API_ALLOWED_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? []
+
+function isOriginAllowed(origin: string | null) {
+  if (allowedOrigins.length === 0) return true
+  if (!origin) return true
+  return allowedOrigins.includes(origin)
+}
+
+// Apply CORS headers while respecting the allowlist (defaults to open if unset)
+function withCors(req: NextRequest | null, res: NextResponse) {
+  const origin = req?.headers.get("origin") ?? null
+  if (isOriginAllowed(origin)) {
+    res.headers.set("Access-Control-Allow-Origin", origin ?? "*")
+  }
+  res.headers.set("Vary", "Origin")
   res.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
   res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
   return res
 }
 
+function unauthorized(req: NextRequest) {
+  return withCors(req, NextResponse.json({ error: "Unauthorized" }, { status: 401 }))
+}
+
+function validateToken(req: NextRequest) {
+  const token = req.headers.get("authorization")?.replace("Bearer ", "")
+  const validToken = process.env.DASHBOARD_TOKEN
+  return Boolean(token && validToken && token === validToken)
+}
+
 // Handle preflight
-export async function OPTIONS() {
-  return cors(new NextResponse(null, { status: 204 }))
+export async function OPTIONS(req: NextRequest) {
+  if (!isOriginAllowed(req.headers.get("origin"))) {
+    return withCors(req, NextResponse.json({ error: "Origin not allowed" }, { status: 403 }))
+  }
+  return withCors(req, new NextResponse(null, { status: 204 }))
 }
 
 // POST: receives data from your Chrome extension
@@ -42,18 +68,15 @@ type TicketPayload = {
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "")
-  const validToken = process.env.DASHBOARD_TOKEN
-
-  if (!token || token !== validToken) {
-    return cors(NextResponse.json({ error: "Unauthorized" }, { status: 401 }))
+  if (!validateToken(req)) {
+    return unauthorized(req)
   }
 
   try {
     const body = (await req.json()) as TicketPayload
 
     if (!body.id || !body.brand) {
-      return cors(NextResponse.json({ error: "Missing required fields" }, { status: 400 }))
+      return withCors(req, NextResponse.json({ error: "Missing required fields" }, { status: 400 }))
     }
 
     const baseTicketId = body.id.trim()
@@ -134,15 +157,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return cors(NextResponse.json({ success: true, ticket }))
+    return withCors(req, NextResponse.json({ success: true, ticket }))
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to process request"
-    return cors(NextResponse.json({ error: message }, { status: 500 }))
+    return withCors(req, NextResponse.json({ error: message }, { status: 500 }))
   }
 }
 
-// GET: view all tickets (for debugging)
-export async function GET() {
+// GET remains available for trusted callers but now also requires the bearer token
+export async function GET(req: NextRequest) {
+  if (!validateToken(req)) {
+    return unauthorized(req)
+  }
+
   const tickets = await prisma.ticket.findMany({ orderBy: { updatedAt: "desc" } })
-  return cors(NextResponse.json(tickets))
+  return withCors(req, NextResponse.json(tickets))
 }
