@@ -82,8 +82,17 @@ export default function NotificationDropdown() {
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         setPinnedToasts((prev) => {
-          const existing = new Set(prev.map((notification) => notification.id));
-          const dedupedFresh = orderedFresh.filter((notification) => !existing.has(notification.id));
+          const existingIds = new Set(prev.map((notification) => notification.id));
+          const existingTickets = new Set(prev.map((notification) => notification.ticketId));
+          const dedupedFresh: NotificationItem[] = [];
+
+          for (const notification of orderedFresh) {
+            if (existingIds.has(notification.id)) continue;
+            if (existingTickets.has(notification.ticketId)) continue;
+            existingTickets.add(notification.ticketId);
+            dedupedFresh.push(notification);
+          }
+
           return [...dedupedFresh, ...prev];
         });
       }
@@ -143,15 +152,26 @@ export default function NotificationDropdown() {
     });
 
     const handleVisibility = () => {
-      const delay = document.visibilityState === "visible" ? ACTIVE_POLL_MS : IDLE_POLL_MS;
-      schedule(delay);
+      const isVisible = document.visibilityState === "visible";
+      if (isVisible) {
+        void fetchNotifications();
+      }
+      schedule(isVisible ? ACTIVE_POLL_MS : IDLE_POLL_MS);
+    };
+
+    const handleWindowFocus = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetchNotifications();
+      schedule(ACTIVE_POLL_MS);
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleWindowFocus);
 
     return () => {
       if (timeoutId) window.clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleWindowFocus);
     };
   }, [fetchNotifications]);
 
